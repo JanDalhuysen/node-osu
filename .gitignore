@@ -1,0 +1,11 @@
+node_modules
+data
+assets
+
+tmp
+temp
+
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile

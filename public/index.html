@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Web osu! + Mania + Spectrogram</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <!-- Ambient background glow elements -->
+    <div class="glow-orb top-left"></div>
+    <div class="glow-orb bottom-right"></div>
+
+    <div id="app-container">
+      <!-- Screen 1: Login -->
+      <div id="screen-login" class="screen active">
+        <div class="glass-card">
+          <h1 class="logo-text">osu!<span class="web-accent">web</span></h1>
+          <p class="subtitle">Enter your alias to join the rhythm</p>
+          <div class="input-group">
+            <label for="username-input">Player Username</label>
+            <input type="text" id="username-input" placeholder="e.g. RhythmMaster" autocomplete="off" value="Guest" />
+          </div>
+          <button id="btn-login-next" class="btn primary-btn">Proceed</button>
+        </div>
+      </div>
+
+      <!-- Screen 2: Mode & Song Selection -->
+      <div id="screen-setup" class="screen">
+        <div class="glass-card wide-card">
+          <div class="setup-header">
+            <h2 class="section-title">Configure Session</h2>
+            <span class="user-greeting">Welcome, <strong id="display-username">Guest</strong></span>
+          </div>
+
+          <div class="setup-grid">
+            <!-- Game Mode Card Selector -->
+            <div class="setup-section">
+              <h3>1. Choose Game Mode</h3>
+              <div class="mode-selector">
+                <div class="mode-card active" data-mode="standard">
+                  <div class="mode-icon">🎯</div>
+                  <div class="mode-info">
+                    <h4>Standard Mode</h4>
+                    <p>Click random shrinking circles appearing on screen. Keyboard keys (Z, X, Space) also click.</p>
+                  </div>
+                </div>
+                <div class="mode-card" data-mode="mania">
+                  <div class="mode-icon">🎹</div>
+                  <div class="mode-info">
+                    <h4>osu!mania (4K)</h4>
+                    <p>Hit falling notes in 4 lanes. Controls: D, F, J, K. Classic keyboard rhythm style.</p>
+                  </div>
+                </div>
+                <div class="mode-card" data-mode="spectrogram">
+                  <div class="mode-icon">📈</div>
+                  <div class="mode-info">
+                    <h4>Spectrogram View (30s)</h4>
+                    <p>Generate a 30-second spectrogram image and watch a synced playhead line while audio plays.</p>
+                  </div>
+                </div>
+                <div class="mode-card" data-mode="osu-file">
+                  <div class="mode-icon">📄</div>
+                  <div class="mode-info">
+                    <h4>Import Existing .osu</h4>
+                    <p>Load and play an existing .osu beatmap file with a matching audio file.</p>
+                  </div>
+                </div>
+              </div>
+              <!-- Master Volume settings -->
+              <div class="input-group" style="margin-top: 25px">
+                <label for="volume-slider">Master Volume: <span id="volume-val">10%</span></label>
+                <input type="range" id="volume-slider" min="0" max="100" value="10" step="5" style="width: 100%; accent-color: var(--accent-neon-blue); cursor: pointer" />
+              </div>
+
+              <div id="osu-import-panel" style="margin-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 16px; display: none">
+                <h3 style="margin-bottom: 10px; font-size: 1.05rem">Import Existing Beatmap</h3>
+                <div class="input-group" style="margin-bottom: 12px">
+                  <label for="osu-file-input">.osu File</label>
+                  <input id="osu-file-input" type="file" accept=".osu,text/plain" />
+                </div>
+                <div class="input-group" style="margin-bottom: 12px">
+                  <label for="osu-audio-input">Audio File</label>
+                  <input id="osu-audio-input" type="file" accept="audio/*" />
+                </div>
+                <div class="input-group" style="margin-bottom: 12px">
+                  <label for="osu-play-mode-select">Play As</label>
+                  <select
+                    id="osu-play-mode-select"
+                    style="width: 100%; background: rgba(0, 0, 0, 0.25); border: 1px solid rgba(255, 255, 255, 0.1); padding: 12px 14px; border-radius: 10px; color: #fff"
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="mania">Mania (4K)</option>
+                    <option value="standard-to-mania">Standard converted to Mania (4K)</option>
+                  </select>
+                </div>
+                <button id="btn-load-osu-file" class="btn secondary-btn" style="margin-left: 0">Play Imported Beatmap</button>
+                <p id="osu-import-status" class="desc-text" style="margin-top: 10px; margin-bottom: 0">Supports osu!standard and osu!mania (.osu).</p>
+                <div style="margin-top: 12px; border-top: 1px solid rgba(255, 255, 255, 0.06); padding-top: 12px">
+                  <button id="btn-refresh-native-mania" class="btn text-btn" style="margin-top: 0; padding-left: 0">Load Native Mania Library</button>
+                  <div class="search-box-wrapper" style="margin-bottom: 8px">
+                    <input
+                      type="text"
+                      id="native-mania-search"
+                      placeholder="Search native mania maps..."
+                      style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: #fff"
+                    />
+                  </div>
+                  <div id="native-mania-list" class="local-songs-list-scroll" style="max-height: 150px">
+                    <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 12px">No native mania maps loaded.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Song Downloader Card -->
+            <div class="setup-section">
+              <h3>2. Load a YouTube Song</h3>
+              <p class="desc-text">Submit any YouTube link. The server will download and run beat-detection to generate the notes map!</p>
+              <div class="input-group">
+                <input type="text" id="youtube-url-input" placeholder="https://www.youtube.com/watch?v=..." autocomplete="off" />
+              </div>
+              <div class="setup-buttons">
+                <button id="btn-load-song" class="btn primary-btn">Analyze & Play</button>
+                <!-- <button id="btn-demo-song" class="btn secondary-btn">Use Demo Song (Local)</button> -->
+              </div>
+
+              <!-- Downloaded Songs Selector -->
+              <div class="downloaded-songs-container" style="margin-top: 25px">
+                <h3 style="margin-bottom: 10px; font-size: 1.15rem">Or Choose a Downloaded Song</h3>
+                <div class="search-box-wrapper" style="margin-bottom: 10px">
+                  <input
+                    type="text"
+                    id="local-song-search"
+                    placeholder="Search downloaded songs..."
+                    style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(0, 0, 0, 0.2); color: #fff"
+                  />
+                </div>
+                <div id="local-songs-list" class="local-songs-list-scroll">
+                  <div style="text-align: center; color: var(--text-secondary); font-size: 0.85rem; padding: 20px">Loading downloaded songs...</div>
+                </div>
+              </div>
+
+              <div class="additional-options">
+                <button id="btn-show-scores" class="btn text-btn">View Leaderboard</button>
+                <button id="btn-logout" class="btn text-btn">Change User</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 3: Loader -->
+      <div id="screen-loader" class="screen">
+        <div class="glass-card loader-card">
+          <div class="spinner"></div>
+          <h2 id="loader-status">Downloading Song...</h2>
+          <p id="loader-substatus" class="substatus-text">Fetching audio stream from YouTube and generating beat maps. This may take 20-30 seconds.</p>
+        </div>
+      </div>
+
+      <!-- Screen 4: Game Screen -->
+      <div id="screen-game" class="screen">
+        <div class="game-hud">
+          <div class="hud-item score-hud">
+            <span class="label">SCORE</span>
+            <span id="game-score" class="value">0000000</span>
+          </div>
+          <div class="hud-item combo-hud">
+            <span class="label">COMBO</span>
+            <span id="game-combo" class="value">0x</span>
+          </div>
+          <div class="hud-item accuracy-hud">
+            <span class="label">ACCURACY</span>
+            <span id="game-accuracy" class="value">100.00%</span>
+          </div>
+          <div class="hud-item time-hud">
+            <span class="label">TIME</span>
+            <span id="game-timer" class="value">0.00s</span>
+          </div>
+          <div class="hud-item control-hud">
+            <button id="btn-exit-game" class="btn mini-btn">Quit</button>
+          </div>
+        </div>
+
+        <!-- Hit timing indicator ("Perfect", "Good", "Miss") overlay -->
+        <div id="rating-overlay"></div>
+
+        <!-- The canvas drawing plane -->
+        <div class="canvas-wrapper">
+          <canvas id="game-canvas" width="1600" height="900"></canvas>
+        </div>
+
+        <!-- Start countdown modal -->
+        <div id="countdown-modal" class="modal-overlay">
+          <div class="countdown-value" id="countdown-text">3</div>
+        </div>
+      </div>
+
+      <!-- Screen 5: Leaderboard overlay -->
+      <div id="screen-leaderboard" class="screen">
+        <div class="glass-card wide-card">
+          <h2 class="section-title">Global Leaderboard</h2>
+          <div class="table-wrapper">
+            <table class="leaderboard-table">
+              <thead>
+                <tr>
+                  <th>Rank</th>
+                  <th>Player</th>
+                  <th>Song</th>
+                  <th>Mode</th>
+                  <th>Score</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body">
+                <tr>
+                  <td colspan="5" style="text-align: center">Loading scores...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 20px; text-align: center">
+            <button id="btn-close-scores" class="btn primary-btn">Back to Setup</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Screen 6: Results Screen -->
+      <div id="screen-results" class="screen">
+        <div class="glass-card">
+          <h1 class="logo-text">Evaluation</h1>
+          <h2 id="results-song-title" class="song-title">Song Title</h2>
+          <p id="results-mode" class="subtitle">Mode: Standard</p>
+
+          <div class="results-stats">
+            <div class="stat-box">
+              <span class="stat-label">Final Score</span>
+              <span id="results-score" class="stat-val text-neon-blue">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Max Combo</span>
+              <span id="results-combo" class="stat-val text-neon-pink">0</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-label">Accuracy</span>
+              <span id="results-accuracy" class="stat-val text-neon-green">100%</span>
+            </div>
+          </div>
+
+          <button id="btn-results-continue" class="btn primary-btn">Back to Selection</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="ui.js"></script>
+    <script src="game.js"></script>
+  </body>
+</html>

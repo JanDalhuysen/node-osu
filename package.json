@@ -1,0 +1,23 @@
+{
+  "name": "nodejs-osu",
+  "version": "1.0.0",
+  "description": "HTML5 Canvas and Node.js osu! game with randomly generated beatmaps",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "axios": "^1.18.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "sqlite3": "^6.0.1"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.4"
+  }
+}
