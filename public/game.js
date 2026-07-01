@@ -642,7 +642,9 @@ function drawStandard(currentTime) {
     if (currentTime < c.startTime) return;
 
     let alpha = 1.0;
-    if (currentTime <= c.maxTime) {
+    if (c.hitStarted) {
+      alpha = 1.0;
+    } else if (currentTime <= c.maxTime) {
       // Fade in approach
       alpha = (currentTime - c.startTime) / (c.maxTime - c.startTime);
     } else {

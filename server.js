@@ -256,6 +256,7 @@ function createManiaBeatmap(normalized, rng) {
   let sameLaneRun = 0;
   let lastHoldTime = -Infinity;
   let previousEventTime = normalized[0].time;
+  let lastPlacedTime = -Infinity;
 
   for (let i = 0; i < normalized.length; i++) {
     const event = normalized[i];
@@ -279,6 +280,7 @@ function createManiaBeatmap(normalized, rng) {
     const localGap = Math.min(prevGap, nextGap);
     const densityFactor = clamp(gridSize / Math.max(localGap, 0.045), 0.55, 2.8);
     const weakNote = strength < 0.72 && duration < durationCenter * 1.05;
+    const accentNote = strength >= 1.02 || duration >= durationCenter * 1.25;
 
     if (nearPrevious < Math.max(0.05, fineGrid * 0.68) && weakNote && eventsInBucket.length === 0) {
       continue;
@@ -288,6 +290,10 @@ function createManiaBeatmap(normalized, rng) {
     const snappedTime = snapToGrid(event.time, preferredSnap, gridOffset);
     const snappedBucket = snappedTime.toFixed(3);
     const snappedEvents = occupied.get(snappedBucket) || eventsInBucket;
+    const quickAlternationWindow = Math.max(0.095, fineGrid * 1.05);
+    if (snappedTime - lastPlacedTime < quickAlternationWindow && !accentNote && snappedEvents.length === 0) {
+      continue;
+    }
 
     const fallbackLane = Number.isInteger(event.lane) ? event.lane : getLaneFromPitch(event.pitch);
     const anchorLane = getPitchAnchorLane(event.pitch);
@@ -351,12 +357,12 @@ function createManiaBeatmap(normalized, rng) {
     const melodicStability = prevEvent && next ? 1 - clamp((Math.abs(event.pitch - prevEvent.pitch) + Math.abs(next.pitch - event.pitch)) / 24, 0, 1) : 0.6;
     const sustainFromDuration = clamp((duration - Math.max(0.16, durationCenter * 1.1)) / Math.max(0.2, durationCenter * 2.2), 0, 1);
     const transientPenalty = clamp((densityFactor - 1.15) * 0.42, 0, 0.58) + (Math.abs(melodicDirection) >= 9 ? 0.15 : 0);
-    const sustainScore = clamp(sustainFromDuration * 0.62 + melodicStability * 0.28 + (strength > 1.05 ? 0.12 : 0) - transientPenalty, 0, 1);
-    const minHoldDuration = Math.max(0.26, preferredSnap * 2.2);
-    const holdMaxDuration = Number.isFinite(nextGap) ? Math.min(1.85, Math.max(minHoldDuration + 0.08, nextGap + preferredSnap * (sustainScore > 0.7 ? 1.7 : 1.05))) : 1.85;
-    const holdCandidateDuration = quantizeDuration(duration * (0.9 + sustainScore * 0.8), fineGrid, minHoldDuration, holdMaxDuration);
+    const sustainScore = clamp(sustainFromDuration * 0.56 + melodicStability * 0.26 + (strength > 1.08 ? 0.1 : 0) - transientPenalty, 0, 1);
+    const minHoldDuration = Math.max(0.24, preferredSnap * 2.05);
+    const holdMaxDuration = Number.isFinite(nextGap) ? Math.min(1.2, Math.max(minHoldDuration + 0.08, nextGap + preferredSnap * (sustainScore > 0.74 ? 1.15 : 0.82))) : 1.2;
+    const holdCandidateDuration = quantizeDuration(duration * (0.76 + sustainScore * 0.46), fineGrid, minHoldDuration, holdMaxDuration);
     const denseWindow = nearPrevious < Math.max(0.105, gridSize * 0.78) || nextGap < Math.max(0.115, gridSize * 0.82);
-    const isHold = canUseLane && sustainScore >= 0.4 && !denseWindow && snappedTime - lastHoldTime > Math.max(0.2, gridSize * 1.25) && holdCandidateDuration >= minHoldDuration;
+    const isHold = canUseLane && sustainScore >= 0.52 && !denseWindow && snappedTime - lastHoldTime > Math.max(0.22, gridSize * 1.4) && holdCandidateDuration >= minHoldDuration;
     const playableDuration = isHold ? Number(holdCandidateDuration.toFixed(3)) : 0.1;
     chart.push({
       time: Number(snappedTime.toFixed(3)),
@@ -374,9 +380,10 @@ function createManiaBeatmap(normalized, rng) {
     if (isHold) {
       lastHoldTime = snappedTime;
     }
+    lastPlacedTime = snappedTime;
 
-    const chordIntent = clamp((strength - 0.76) * 0.9 + (densityFactor - 1) * 0.3 + (nextGap < gridSize * 1.35 ? 0.1 : 0), 0, 0.55);
-    const canAddChord = snappedEvents.length < 2 && nearPrevious > Math.max(0.11, preferredSnap * 1.0) && !isHold && rng() < chordIntent;
+    const chordIntent = clamp((strength - 0.82) * 0.62 + (densityFactor - 1) * 0.18 + (nextGap < gridSize * 1.3 ? 0.04 : 0), 0, 0.32) * 0.8;
+    const canAddChord = snappedEvents.length < 2 && nearPrevious > Math.max(0.13, preferredSnap * 1.22) && !isHold && !denseWindow && rng() < chordIntent;
     if (canAddChord) {
       const chordLane = [3 - lane, (lane + 2) % 4, (lane + 1) % 4, (lane + 3) % 4].find(
         (candidate) => !snappedEvents.includes(candidate) && laneAvailableAt[candidate] <= snappedTime && Math.abs(candidate - lane) >= 1,
@@ -395,7 +402,7 @@ function createManiaBeatmap(normalized, rng) {
         laneHeat[chordLane] += 0.8;
         laneAvailableAt[chordLane] = snappedTime + Math.max(0.1, preferredSnap * 1.05);
 
-        const canAddTriple = chordIntent >= 0.44 && snappedEvents.length < 3 && rng() < 0.18;
+        const canAddTriple = chordIntent >= 0.58 && snappedEvents.length < 3 && strength >= 1.18 && rng() < 0.04;
         if (canAddTriple) {
           const tripleLane = [0, 1, 2, 3].find((candidate) => !snappedEvents.includes(candidate) && laneAvailableAt[candidate] <= snappedTime);
           if (tripleLane !== undefined) {
@@ -456,16 +463,16 @@ function enhanceManiaChart(chart, rng, gridSize, fineGrid) {
 
     if (note.type === "tap") {
       const holdWindow = nextSameLaneWindow[i];
-      const holdChance = clamp(0.09 + (note.strength - 0.82) * 0.24 + (holdWindow > 0.56 ? 0.13 : 0), 0.07, 0.34);
+      const holdChance = clamp(0.06 + (note.strength - 0.88) * 0.16 + (holdWindow > 0.62 ? 0.08 : 0), 0.04, 0.2);
       if (holdWindow > 0.3 && rng() < holdChance) {
-        const maxLen = Math.min(1.05, holdWindow - 0.08);
-        if (maxLen >= 0.24) {
+        const maxLen = Math.min(0.75, holdWindow - 0.1);
+        if (maxLen >= 0.22) {
           note.type = "hold";
-          note.duration = Number(clamp(snap(maxLen * 0.58, fineGrid), 0.24, maxLen).toFixed(3));
+          note.duration = Number(clamp(snap(maxLen * 0.45, fineGrid), 0.22, maxLen).toFixed(3));
         }
       }
 
-      const chordChance = clamp(0.12 + (note.strength - 0.85) * 0.3 + (nextGap < gridSize * 1.4 ? 0.07 : 0), 0.08, 0.36);
+      const chordChance = clamp(0.06 + (note.strength - 0.9) * 0.2 + (nextGap < gridSize * 1.35 ? 0.03 : 0), 0.04, 0.2) * 0.8;
       if (rng() < chordChance) {
         const key = keyOf(note.time);
         const atTime = occupied.get(key) || new Set();
@@ -508,6 +515,8 @@ function enhanceManiaChart(chart, rng, gridSize, fineGrid) {
       const preferred = [(current.lane + 1) % 4, (current.lane + 3) % 4, 3 - current.lane, next.lane];
       const lane = preferred.find((candidate) => !atTime.has(candidate) && candidate !== current.lane);
       if (lane === undefined) continue;
+
+      if (rng() > 0.75) continue; // Skip 25% of filler notes to slightly reduce note density
 
       additions.push({
         time: t,
