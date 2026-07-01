@@ -1,5 +1,11 @@
 # node-osu
 
+![node-osu](node-osu.png)
+
+![spectrogram](spectrogram.png)
+
+---
+
 A browser-based **osu!-inspired rhythm game** built with **Node.js + Express + HTML5 Canvas**.
 
 It supports:
